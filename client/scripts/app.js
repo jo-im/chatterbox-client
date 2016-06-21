@@ -1,40 +1,33 @@
 (function() {
 document.addEventListener('DOMContentLoaded', function() {
-  const SECONDS = 10000;
+  const REFRESH_INTERVAL = 10000;
+  const SERVER_URL = 'https://api.parse.com/1/classes/messages';
 
   let messageList;
   let latestMessageCreatedAt = '2000-01-11T00:00:01.000Z';
 
   const init = function() {
     getMessagesFromServer();
-    setInterval(getMessagesFromServer, SECONDS);
+    setInterval(getMessagesFromServer, REFRESH_INTERVAL);
 
-    $('#submit-message').on('click', function() {
-      const equalIndex = window.location.search.indexOf('username=');
-      const username = window.location.search.slice(equalIndex + 9);
+    $('#submit-message').on('click', handleMessageSubmit);
+  };
 
-      const userMessage = $('#message-input').val();
-      const user = {
-        username: username,
-        text: userMessage,
-        roomname: 'HR'
-      };
-      postMessageToServer(user);
-    });
+  const handleMessageSubmit = function() {
+    const params = window.location.search;
+    const username = params.slice(params.indexOf('username=') + 9);
+    const text = $('#message-input').val();
+    postMessageToServer(username, text, 'HR');
   };
 
   const getMessagesFromServer = function() {
     $.ajax({
-      url: 'https://api.parse.com/1/classes/messages',
+      url: SERVER_URL,
       type: 'GET',
-      data: {where: {
-        createdAt: {
-          '$gt': latestMessageCreatedAt
-        }
-      }},
+      data: {where: {createdAt: {'$gt': latestMessageCreatedAt}}},
       dataType: 'json',
       success: function(data) {
-        if (data.results.length !== 0) {
+        if (data.results.length > 0) {
           messageList = escapeArrayOfObjects(data.results);
           renderMessageList();
           console.log('chatterbox: message list retrieved.');
@@ -46,11 +39,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   };
 
-  const postMessageToServer = function(user) {
+  const postMessageToServer = function(username, text, roomname) {
     $.ajax({
-      url: 'https://api.parse.com/1/classes/messages',
+      url: SERVER_URL,
       type: 'POST',
-      data: JSON.stringify(user),
+      data: JSON.stringify({username, text, roomname}),
       contentType: 'application/json',
       success: function() {
         getMessagesFromServer();
@@ -69,10 +62,10 @@ document.addEventListener('DOMContentLoaded', function() {
   };
 
   const renderMessageList = function() {
-    messageList.forEach(function(messageObj, index) {
-      $('#chats').prepend(generateMessageElement(messageList[messageList.length - 1 - index]));
-    });
-    latestMessageCreatedAt = messageList[0].createdAt;
+    for (var i = messageList.length - 1; i >= 0; i--) {
+      $('#chats').prepend(generateMessageElement(messageList[i]));
+      latestMessageCreatedAt = messageList[i].createdAt;
+    }
   };
 
   const generateMessageElement = function({ username, text }) {
