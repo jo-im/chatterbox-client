@@ -1,18 +1,30 @@
 (function() {
 document.addEventListener('DOMContentLoaded', function() {
-  const SECONDS = 5000;
+  const SECONDS = 10000;
+
   let messageList;
   let latestMessageCreatedAt = '2000-01-11T00:00:01.000Z';
 
   const init = function() {
     getMessagesFromServer();
-
     setInterval(getMessagesFromServer, SECONDS);
+
+    $('#submit-message').on('click', function() {
+      const equalIndex = window.location.search.indexOf('username=');
+      const username = window.location.search.slice(equalIndex + 9);
+
+      const userMessage = $('#message-input').val();
+      const user = {
+        username: username,
+        text: userMessage,
+        roomname: 'HR'
+      };
+      postMessageToServer(user);
+    });
   };
 
   const getMessagesFromServer = function() {
     $.ajax({
-      // This is the url you should use to communicate with the parse API server.
       url: 'https://api.parse.com/1/classes/messages',
       type: 'GET',
       data: {where: {
@@ -30,6 +42,22 @@ document.addEventListener('DOMContentLoaded', function() {
       },
       error: function(data) {
         console.error('chatterbox: Failed to retrieve message list', data);
+      }
+    });
+  };
+
+  const postMessageToServer = function(user) {
+    $.ajax({
+      url: 'https://api.parse.com/1/classes/messages',
+      type: 'POST',
+      data: JSON.stringify(user),
+      contentType: 'application/json',
+      success: function() {
+        getMessagesFromServer();
+        console.log('chatterbox: Message sent');
+      },
+      error: function(data) {
+        console.error('chatterbox: Failed to send message', data);
       }
     });
   };
