@@ -15,9 +15,11 @@
   <body>
     <div id="main">
       <h1>chatterbox</h1>
-      <form onsubmit="return false;">
-        <input type="text" name="UserMessage" id="message-input">
-        <button type="button" id="submit-message">Submit</button>
+      <select name="rooms" id="roomSelect">
+      </select>
+      <form action="#" id="send" method="post">
+        <input type="text" name="message" id="message"/>
+        <input type="submit" name="submit" class="submit"/>
       </form>
     </div>
     <div id="chats"></div>

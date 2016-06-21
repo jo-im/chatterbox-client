@@ -1,7 +1,9 @@
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener('DOMContentLoaded', function() {
   const REFRESH_INTERVAL = 10000;
 
-  let messageList;
+  let roomList;
+  let selectedRoom;
+  const friendList = [];
   let latestMessageCreatedAt = '2000-01-11T00:00:01.000Z';
 
   window.app = {
@@ -9,28 +11,56 @@ document.addEventListener("DOMContentLoaded", function() {
 
     init: function() {
       app.fetch();
+      app.fetch({getRooms: true});
       setInterval(app.fetch, REFRESH_INTERVAL);
 
-      $('#submit-message').on('click', app.handleMessageSubmit);
+      $('.username').on('click', app.addFriend);
+      $('#send').on('submit', app.handleSubmit);
+      $('#roomSelect').on('change', app.handleRoomSelect);
     },
 
-    handleMessageSubmit: function() {
+    handleSubmit: function(event) {
+      event.preventDefault();
       const params = window.location.search;
       const username = params.slice(params.indexOf('username=') + 9);
-      const text = $('#message-input').val();
+      const text = $('#message').val();
       app.send({username, text, roomname: 'HR'});
     },
 
-    fetch: function() {
+    handleRoomSelect: function(event) {
+      selectedRoom = this.value;
+      app.fetch({getMessagesInRoom: true});
+    },
+
+    fetch: function(options) {
+      let queryOptions;
+      if (options && options.getRooms) {
+        queryOptions = {keys: 'roomname', limit: 1000};
+      } else if (options && options.getMessagesInRoom) {
+        queryOptions = {where: {roomname: selectedRoom}};
+      } else {
+        queryOptions = {where: {createdAt: {'$gt': latestMessageCreatedAt}}};
+      }
+
       $.ajax({
         url: app.server,
         type: 'GET',
-        data: {where: {createdAt: {'$gt': latestMessageCreatedAt}}},
+        data: queryOptions,
         dataType: 'json',
         success: function(data) {
-          if (data.results.length > 0) {
-            messageList = app.escapeArrayOfObjects(data.results);
-            app.renderMessageList();
+          if (data.results.length === 0) {
+            return;
+          }
+
+          const escaped = app.escapeArrayOfObjects(data.results);
+          if (options && options.getRooms) {
+            const roomNames = _.uniq(escaped.map(obj => obj.roomname));
+            roomNames.forEach(roomName => app.addRoom(roomName));
+          } else if (options && options.getMessagesInRoom) {
+            app.clearMessages();
+            app.renderMessageList(escaped);
+          } else {
+            app.renderMessageList(escaped);
             console.log('chatterbox: message list retrieved.');
           }
         },
@@ -62,15 +92,33 @@ document.addEventListener("DOMContentLoaded", function() {
       });
     },
 
-    renderMessageList: function() {
+    renderMessageList: function(messageList) {
       for (var i = messageList.length - 1; i >= 0; i--) {
         $('#chats').prepend(app.generateMessageElement(messageList[i]));
         latestMessageCreatedAt = messageList[i].createdAt;
       }
     },
 
+    clearMessages: function() {
+      $('#chats').empty();
+    },
+
     generateMessageElement: function({ username, text }) {
       return $(`<div class="chat"><div class="username">${username}</div><div class="message">${text}</div></div>`);
+    },
+
+    addMessage: function({ username, text }) {
+      const $messageElement = $(`<div class="chat"><div class="username">${username}</div><div class="message">${text}</div></div>`);
+      $('#chats').prepend($messageElement);
+    },
+
+    addRoom: function(roomName) {
+      const $optionElement = $(`<option value="${roomName}">${roomName}</option>`);
+      $('#roomSelect').append($optionElement);
+    },
+
+    addFriend: function() {
+      friendList.push($(this).text());
     }
   };
 
