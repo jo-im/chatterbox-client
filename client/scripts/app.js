@@ -1,10 +1,13 @@
 (function() {
 document.addEventListener('DOMContentLoaded', function() {
+  const SECONDS = 5000;
   let messageList;
   let latestMessageCreatedAt = '2000-01-11T00:00:01.000Z';
 
   const init = function() {
     getMessagesFromServer();
+
+    setInterval(getMessagesFromServer, SECONDS);
   };
 
   const getMessagesFromServer = function() {
@@ -19,16 +22,17 @@ document.addEventListener('DOMContentLoaded', function() {
       }},
       dataType: 'json',
       success: function(data) {
-        console.log('chatterbox: message list retrieved.');
-        messageList = escapeArrayOfObjects(data.results);
-        renderMessageList();
+        if (data.results.length !== 0) {
+          messageList = escapeArrayOfObjects(data.results);
+          renderMessageList();
+          console.log('chatterbox: message list retrieved.');
+        }
       },
       error: function(data) {
         console.error('chatterbox: Failed to retrieve message list', data);
       }
     });
   };
-
 
   const escapeArrayOfObjects = function(array) {
     return array.map(function(obj) {
@@ -37,8 +41,8 @@ document.addEventListener('DOMContentLoaded', function() {
   };
 
   const renderMessageList = function() {
-    messageList.forEach(function(messageObj) {
-      $('#chats').append(generateMessageElement(messageObj));
+    messageList.forEach(function(messageObj, index) {
+      $('#chats').prepend(generateMessageElement(messageList[messageList.length - 1 - index]));
     });
     latestMessageCreatedAt = messageList[0].createdAt;
   };
