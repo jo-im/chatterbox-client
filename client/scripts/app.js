@@ -1,10 +1,10 @@
 document.addEventListener('DOMContentLoaded', function() {
   const REFRESH_INTERVAL = 10000;
-
+  const GET_ALL_MESSAGES_DATE = '2000-01-11T00:00:01.000Z';
   let roomList;
-  let selectedRoom;
+  let selectedRoom = 'lobby';
   const friendList = [];
-  let latestMessageCreatedAt = '2000-01-11T00:00:01.000Z';
+  let latestMessageCreatedAt = GET_ALL_MESSAGES_DATE;
 
   window.app = {
     server: 'https://api.parse.com/1/classes/messages',
@@ -24,23 +24,29 @@ document.addEventListener('DOMContentLoaded', function() {
       const params = window.location.search;
       const username = params.slice(params.indexOf('username=') + 9);
       const text = $('#message').val();
-      app.send({username, text, roomname: 'HR'});
+      app.send({username, text, roomname: selectedRoom});
     },
 
     handleRoomSelect: function(event) {
       selectedRoom = this.value;
-      app.fetch({getMessagesInRoom: true});
+      latestMessageCreatedAt = GET_ALL_MESSAGES_DATE;
+      app.clearMessages();
+      if (selectedRoom === '__new-room__') {
+        app.createNewRoom();
+      } else {
+        app.fetch();
+      }
     },
 
     fetch: function(options) {
       let queryOptions;
       if (options && options.getRooms) {
         queryOptions = {keys: 'roomname', limit: 1000};
-      } else if (options && options.getMessagesInRoom) {
-        queryOptions = {where: {roomname: selectedRoom}};
       } else {
-        queryOptions = {where: {createdAt: {'$gt': latestMessageCreatedAt}}};
-      }
+        queryOptions = {where: {roomname: selectedRoom, createdAt: {'$gt': latestMessageCreatedAt}}};
+      }// } else {
+      //   queryOptions = {where: {createdAt: {'$gt': latestMessageCreatedAt}}};
+      // }
 
       $.ajax({
         url: app.server,
@@ -56,13 +62,12 @@ document.addEventListener('DOMContentLoaded', function() {
           if (options && options.getRooms) {
             const roomNames = _.uniq(escaped.map(obj => obj.roomname));
             roomNames.forEach(roomName => app.addRoom(roomName));
-          } else if (options && options.getMessagesInRoom) {
-            app.clearMessages();
-            app.renderMessageList(escaped);
           } else {
             app.renderMessageList(escaped);
-            console.log('chatterbox: message list retrieved.');
-          }
+          }// } else {
+          //   app.renderMessageList(escaped);
+          //   console.log('chatterbox: message list retrieved.');
+          // }
         },
         error: function(data) {
           console.error('chatterbox: Failed to retrieve message list', data);
@@ -114,7 +119,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     addRoom: function(roomName) {
       const $optionElement = $(`<option value="${roomName}">${roomName}</option>`);
-      $('#roomSelect').append($optionElement);
+      $('#new-room-option').after($optionElement);
+    },
+
+    createNewRoom: function() {
+      const newRoomName = prompt('Enter new room name:');
+      selectedRoom = newRoomName;
+      app.addRoom(newRoomName);
+      $('#roomSelect').val(newRoomName);
     },
 
     addFriend: function() {
