@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
   const REFRESH_INTERVAL = 10000;
   const GET_ALL_MESSAGES_DATE = '2000-01-11T00:00:01.000Z';
+  
   let roomList;
   let selectedRoom = 'lobby';
   const friendList = [];
@@ -14,7 +15,6 @@ document.addEventListener('DOMContentLoaded', function() {
       app.fetch({getRooms: true});
       setInterval(app.fetch, REFRESH_INTERVAL);
 
-      $('.username').on('click', app.addFriend);
       $('#send').on('submit', app.handleSubmit);
       $('#roomSelect').on('change', app.handleRoomSelect);
     },
@@ -44,9 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
         queryOptions = {keys: 'roomname', limit: 1000};
       } else {
         queryOptions = {where: {roomname: selectedRoom, createdAt: {'$gt': latestMessageCreatedAt}}};
-      }// } else {
-      //   queryOptions = {where: {createdAt: {'$gt': latestMessageCreatedAt}}};
-      // }
+      }
 
       $.ajax({
         url: app.server,
@@ -64,10 +62,7 @@ document.addEventListener('DOMContentLoaded', function() {
             roomNames.forEach(roomName => app.addRoom(roomName));
           } else {
             app.renderMessageList(escaped);
-          }// } else {
-          //   app.renderMessageList(escaped);
-          //   console.log('chatterbox: message list retrieved.');
-          // }
+          }
         },
         error: function(data) {
           console.error('chatterbox: Failed to retrieve message list', data);
@@ -102,6 +97,8 @@ document.addEventListener('DOMContentLoaded', function() {
         $('#chats').prepend(app.generateMessageElement(messageList[i]));
         latestMessageCreatedAt = messageList[i].createdAt;
       }
+      $('.username').on('click', app.addFriend);
+      app.boldFriendsMessages();
     },
 
     clearMessages: function() {
@@ -131,6 +128,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     addFriend: function() {
       friendList.push($(this).text());
+      app.boldFriendsMessages();
+    },
+
+    boldFriendsMessages: function() {
+      friendList.forEach(function(friend) {
+        $('.username').filter(function() { return $(this).text() === friend; }).next().addClass('friend');
+      });
     }
   };
 
